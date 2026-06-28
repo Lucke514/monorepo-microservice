@@ -1,0 +1,10 @@
+{
+    "material-icon-theme.activeIconPack": "nest",
+    "search.exclude": {
+        "**/node_modules": true,
+    },
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/dist": true
+    }
+}
