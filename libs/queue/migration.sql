@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   locked_at     TIMESTAMPTZ,
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   processed_at  TIMESTAMPTZ,
-  error_message TEXT
+  error_message TEXT,
+  result        JSONB
 );
 
 -- Partial index for the SKIP LOCKED claim query — only scans 'pending' rows

@@ -16,4 +16,5 @@ export interface JobEntity {
     createdAt: Date;
     processedAt: Date | null;
     errorMessage: string | null;
+    result: Record<string, unknown> | null;
 }

@@ -12,6 +12,10 @@ interface EnvVars {
     DB_NAME: string;
     DB_USER: string;
     DB_PASS: string;
+    DB_LISTEN_HOST: string;
+    DB_LISTEN_PORT: number;
+    QUEUE_REQUEST_TIMEOUT_MS: number;
+    QUEUE_POOL_MAX: number;
 }
 
 const envsSchema = joi
@@ -23,6 +27,12 @@ const envsSchema = joi
         DB_NAME: joi.string().required(),
         DB_USER: joi.string().required(),
         DB_PASS: joi.string().required(),
+        // Por defecto, LISTEN va al mismo host/port que los pools. Con PgBouncer
+        // se apunta a Postgres directo (ver docker-compose).
+        DB_LISTEN_HOST: joi.string().default(joi.ref('DB_HOST')),
+        DB_LISTEN_PORT: joi.number().default(joi.ref('DB_PORT')),
+        QUEUE_REQUEST_TIMEOUT_MS: joi.number().default(30_000),
+        QUEUE_POOL_MAX: joi.number().default(20),
     })
     .unknown(true);
 
@@ -44,4 +54,8 @@ export const envs: EnvVars = {
     DB_NAME: value.DB_NAME,
     DB_USER: value.DB_USER,
     DB_PASS: value.DB_PASS,
+    DB_LISTEN_HOST: value.DB_LISTEN_HOST,
+    DB_LISTEN_PORT: value.DB_LISTEN_PORT,
+    QUEUE_REQUEST_TIMEOUT_MS: value.QUEUE_REQUEST_TIMEOUT_MS,
+    QUEUE_POOL_MAX: value.QUEUE_POOL_MAX,
 };

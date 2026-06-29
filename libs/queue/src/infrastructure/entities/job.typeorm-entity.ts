@@ -55,4 +55,7 @@ export class JobTypeOrmEntity {
         default: null,
     })
     errorMessage: string | null;
+
+    @Column({ type: 'jsonb', nullable: true, default: null })
+    result: Record<string, unknown> | null;
 }

@@ -3,6 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: monorepo-db
     restart: unless-stopped
+    # Sube el límite de conexiones: 5 workers × (pool + listen) + main-app
+    # superan el default de 100. Ajusta junto con los *_POOL_MAX / *_MAX_CONNECTIONS.
+    command: ["postgres", "-c", "max_connections=200"]
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASS:-postgres}
@@ -21,40 +24,95 @@ services:
       retries: 5
       start_period: 10s
 
+  # Connection pooler (modo transaction): multiplexa los pools de las apps sobre
+  # pocas conexiones reales a Postgres → permite escalar workers sin agotar
+  # max_connections. OJO: los clientes LISTEN NO pasan por aquí (van directos a db).
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: monorepo-pgbouncer
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASS:-postgres}
+      DB_NAME: ${DB_NAME:-queue_db}
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: 2000
+      DEFAULT_POOL_SIZE: 50
+    ports:
+      - "6432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   main-app:
     build:
       context: .
       dockerfile: apps/main-app/Dockerfile
-    container_name: monorepo-main-app
+    # Sin container_name ni ports: el productor es escalable a N instancias.
+    #   docker compose up -d --scale main-app=2
+    # El endpoint público (localhost:3000) lo expone el gateway (nginx),
+    # que balancea round-robin entre las réplicas.
     restart: unless-stopped
     depends_on:
-      db:
+      pgbouncer:
         condition: service_healthy
     # Credenciales DB y tuning de cola desde una sola fuente (.env).
     env_file:
       - .env
     # Overrides específicos de Docker (difieren del .env local).
+    # Pools → pgbouncer; LISTEN del reply waiter → db directo.
     environment:
       NODE_ENV: production
-      DB_HOST: db
+      DB_HOST: pgbouncer
+      DB_LISTEN_HOST: db
       PORT: 3000
+
+  # Reverse proxy / balanceador: único puerto publicado al host. Reparte el
+  # tráfico entre las réplicas internas de main-app (round-robin vía DNS de Docker).
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: monorepo-gateway
+    restart: unless-stopped
+    depends_on:
+      - main-app
     ports:
       - "3000:3000"
+    volumes:
+      - ./nginx/load-balancer.conf:/etc/nginx/nginx.conf:ro
+    # nginx no puede abrir más conexiones que su límite de file descriptors.
+    # Debe ser >= worker_rlimit_nofile del nginx.conf.
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
 
   worker:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
-    container_name: monorepo-worker
+    # Sin container_name: el worker es escalable a N instancias.
+    #   docker compose up -d --scale worker=5
+    # El claim usa FOR UPDATE SKIP LOCKED, así que las instancias no se pisan.
     restart: unless-stopped
     depends_on:
-      db:
+      pgbouncer:
         condition: service_healthy
     env_file:
       - .env
+    # Pools (claim/markDone/pg_notify) → pgbouncer; cliente LISTEN → db directo.
     environment:
       NODE_ENV: production
-      DB_HOST: db
+      DB_HOST: pgbouncer
+      DB_LISTEN_HOST: db
 
 volumes:
   pgdata:

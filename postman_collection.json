@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "Monorepo Microservice - Queue",
+    "description": "Colección para probar main-app: health, emit (fire-and-forget) y request/reply (GET /jobs/sync, bloqueante).\n\nVariable `baseUrl` por defecto http://localhost:3000.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Liveness. Responde {\"status\":\"ok\"}."
+      },
+      "response": []
+    },
+    {
+      "name": "Enqueue job (emit / fire-and-forget)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/jobs?message=hola",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs"],
+          "query": [
+            { "key": "message", "value": "hola" }
+          ]
+        },
+        "description": "Encola un job y responde de inmediato con { jobId, queue }. El worker lo procesa en background; no espera la response."
+      },
+      "response": []
+    },
+    {
+      "name": "Request job (sync / request-reply)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/jobs/sync?message=hola",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "sync"],
+          "query": [
+            { "key": "message", "value": "hola" }
+          ]
+        },
+        "description": "Encola un job y BLOQUEA hasta recibir la response del worker (vía LISTEN/NOTIFY). Devuelve { echo, processedAt }."
+      },
+      "response": []
+    },
+    {
+      "name": "Request job - FAILURE (500)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/jobs/sync?message=fail",
+          "host": ["{{baseUrl}}"],
+          "path": ["jobs", "sync"],
+          "query": [
+            { "key": "message", "value": "fail" }
+          ]
+        },
+        "description": "El sentinel de demo `message=fail` hace que el handler lance. El job agota reintentos y termina 'failed' → HTTP 500."
+      },
+      "response": []
+    }
+  ]
+}

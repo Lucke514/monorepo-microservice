@@ -1,6 +1,12 @@
 export { QueueModule, QUEUE_CONFIG } from './queue.module.js';
 export type { QueueModuleOptions } from './queue.module.js';
 export { EnqueueJobUseCase } from './application/enqueue-job.use-case.js';
+export { RequestJobUseCase } from './application/request-job.use-case.js';
+export type { RequestOptions } from './application/request-job.use-case.js';
+export {
+    JobFailedError,
+    JobTimeoutError,
+} from './domain/errors/queue.errors.js';
 export { QueueProducerAdapter } from './domain/adapters/queue-producer.adapter.js';
 export type { EmitOptions } from './domain/adapters/queue-producer.adapter.js';
 export { JobStatus } from './domain/entities/job.entity.js';

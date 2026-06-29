@@ -45,6 +45,7 @@ export class ClaimJobService implements ClaimJobRepository {
                 ? new Date(row['processed_at'] as string)
                 : null,
             errorMessage: (row['error_message'] as string | null) ?? null,
+            result: (row['result'] as Record<string, unknown> | null) ?? null,
         };
     }
 }

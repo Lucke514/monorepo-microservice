@@ -1,7 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { CustomTransportStrategy, Server } from '@nestjs/microservices';
+import { lastValueFrom } from 'rxjs';
 import { Client, Pool } from 'pg';
 import { JobEntity, JobStatus } from '../../domain/entities/job.entity.js';
+import { JOBS_REPLY_CHANNEL } from '../../queue.constants.js';
 import { PgQueueContext } from './pg-queue.context.js';
 
 export interface PgQueueServerConfig {
@@ -13,6 +15,11 @@ export interface PgQueueServerConfig {
     maxConnections?: number;
     staleJobTimeoutMs?: number;
     staleJobCheckIntervalMs?: number;
+    // El cliente LISTEN debe ir DIRECTO a Postgres (LISTEN/NOTIFY no funciona a
+    // través de PgBouncer en modo transaction). Los pools sí van por PgBouncer
+    // (host/port). Si no se setea, cae a host/port.
+    listenHost?: string;
+    listenPort?: number;
 }
 
 export class PgQueueServer extends Server implements CustomTransportStrategy {
@@ -38,13 +45,7 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
             max: this.config.maxConnections ?? 10,
         });
 
-        this.listenClient = new Client({
-            host: this.config.host,
-            port: this.config.port,
-            database: this.config.database,
-            user: this.config.user,
-            password: this.config.password,
-        });
+        this.listenClient = new Client(this.listenClientConfig());
 
         await this.listenClient.connect();
         await this.subscribeToChannels(this.listenClient);
@@ -126,16 +127,41 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
     ): Promise<void> {
         const ctx = new PgQueueContext([job]);
         try {
-            await handler(job.payload, ctx);
-            await this.markDone(job.id);
+            // Nest enruta las excepciones de los @EventPattern por su
+            // RpcExceptionsHandler y devuelve un Observable que emite el error
+            // por su canal de error (no rechaza la promesa). Convertimos el
+            // resultado a Observable y lo esperamos para que un fallo del
+            // handler llegue al catch y dispare el reintento/markFailed.
+            const resultOrStream = await handler(job.payload, ctx);
+            const result = await lastValueFrom(
+                this.transformToObservable(resultOrStream),
+                { defaultValue: null },
+            );
+            await this.markDone(job.id, result);
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message = this.extractErrorMessage(err);
             this.logger.error(
                 `Job ${job.id} failed (attempt ${job.attempts}/${job.maxRetries}): ${message}`,
             );
             const canRetry = job.attempts < job.maxRetries;
             await this.markFailed(job.id, message, canRetry);
+            // Tras reprogramar, despierta al worker para reintentar de inmediato
+            // (la recovery solo cubre jobs 'processing' colgados, no reintentos).
+            if (canRetry) {
+                await this.pool.query('SELECT pg_notify($1, $2)', [
+                    job.queueName,
+                    job.id,
+                ]);
+            }
         }
+    }
+
+    private extractErrorMessage(err: unknown): string {
+        if (err instanceof Error) return err.message;
+        if (err && typeof err === 'object' && 'message' in err) {
+            return String((err as { message: unknown }).message);
+        }
+        return typeof err === 'string' ? err : JSON.stringify(err);
     }
 
     private async claimJob(queueName: string): Promise<JobEntity | null> {
@@ -172,14 +198,16 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
                 ? new Date(row['processed_at'] as string)
                 : null,
             errorMessage: (row['error_message'] as string | null) ?? null,
+            result: (row['result'] as Record<string, unknown> | null) ?? null,
         };
     }
 
-    private async markDone(id: string): Promise<void> {
+    private async markDone(id: string, result: unknown): Promise<void> {
         await this.pool.query(
-            `UPDATE jobs SET status = 'done', processed_at = NOW() WHERE id = $1`,
-            [id],
+            `UPDATE jobs SET status = 'done', processed_at = NOW(), result = $2 WHERE id = $1`,
+            [id, JSON.stringify(result ?? null)],
         );
+        await this.notifyReply(id);
     }
 
     private async markFailed(
@@ -197,7 +225,16 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
                 `UPDATE jobs SET status = 'failed', processed_at = NOW(), error_message = $2 WHERE id = $1`,
                 [id, message],
             );
+            // Estado terminal: avisa al productor que espera la response para rechazar de inmediato.
+            await this.notifyReply(id);
         }
+    }
+
+    private async notifyReply(id: string): Promise<void> {
+        await this.pool.query('SELECT pg_notify($1, $2)', [
+            JOBS_REPLY_CHANNEL,
+            id,
+        ]);
     }
 
     private startRecovery(): void {
@@ -264,17 +301,21 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
         }
     }
 
+    private listenClientConfig() {
+        return {
+            host: this.config.listenHost ?? this.config.host,
+            port: this.config.listenPort ?? this.config.port,
+            database: this.config.database,
+            user: this.config.user,
+            password: this.config.password,
+        };
+    }
+
     private async reconnect(): Promise<void> {
         let delay = 1_000;
         while (!this.closing) {
             try {
-                const client = new Client({
-                    host: this.config.host,
-                    port: this.config.port,
-                    database: this.config.database,
-                    user: this.config.user,
-                    password: this.config.password,
-                });
+                const client = new Client(this.listenClientConfig());
                 await client.connect();
                 await this.subscribeToChannels(client);
                 client.on(

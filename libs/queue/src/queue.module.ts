@@ -1,6 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EnqueueJobUseCase } from './application/enqueue-job.use-case.js';
+import { RequestJobUseCase } from './application/request-job.use-case.js';
 import { EnqueueJobRepository } from './domain/ports/enqueue-job.repository.js';
 import { ClaimJobRepository } from './domain/ports/claim-job.repository.js';
 import { CompleteJobRepository } from './domain/ports/complete-job.repository.js';
@@ -13,6 +14,7 @@ import { CompleteJobService } from './infrastructure/services/complete-job.servi
 import { FailJobService } from './infrastructure/services/fail-job.service.js';
 import { FindStaleJobsService } from './infrastructure/services/find-stale-jobs.service.js';
 import { StaleJobRecoveryService } from './infrastructure/recovery/stale-job-recovery.service.js';
+import { JobReplyWaiterService } from './infrastructure/transporter/job-reply-waiter.service.js';
 import { QUEUE_CONFIG } from './queue.constants.js';
 import type { QueueModuleOptions } from './queue.constants.js';
 
@@ -35,6 +37,7 @@ export class QueueModule {
                     password: options.password,
                     entities: [JobTypeOrmEntity],
                     synchronize: options.synchronize ?? false,
+                    extra: { max: options.poolMax ?? 10 },
                 }),
                 TypeOrmModule.forFeature([JobTypeOrmEntity], 'queue'),
             ],
@@ -53,8 +56,10 @@ export class QueueModule {
                 },
                 EnqueueJobUseCase,
                 StaleJobRecoveryService,
+                JobReplyWaiterService,
+                RequestJobUseCase,
             ],
-            exports: [EnqueueJobUseCase],
+            exports: [EnqueueJobUseCase, RequestJobUseCase],
         };
     }
 
@@ -81,6 +86,7 @@ export class QueueModule {
                             password: config.password,
                             entities: [JobTypeOrmEntity],
                             synchronize: config.synchronize ?? false,
+                            extra: { max: config.poolMax ?? 10 },
                         };
                     },
                     inject: options.inject as never[] | undefined,
@@ -108,8 +114,10 @@ export class QueueModule {
                 },
                 EnqueueJobUseCase,
                 StaleJobRecoveryService,
+                JobReplyWaiterService,
+                RequestJobUseCase,
             ],
-            exports: [EnqueueJobUseCase],
+            exports: [EnqueueJobUseCase, RequestJobUseCase],
         };
     }
 }

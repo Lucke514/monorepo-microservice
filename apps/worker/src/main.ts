@@ -16,6 +16,9 @@ async function bootstrap() {
                 password: envs.DB_PASS,
                 staleJobTimeoutMs: envs.QUEUE_STALE_JOB_TIMEOUT_MS,
                 staleJobCheckIntervalMs: envs.QUEUE_STALE_JOB_CHECK_INTERVAL_MS,
+                maxConnections: envs.QUEUE_MAX_CONNECTIONS,
+                listenHost: envs.DB_LISTEN_HOST,
+                listenPort: envs.DB_LISTEN_PORT,
             }),
         },
     );
