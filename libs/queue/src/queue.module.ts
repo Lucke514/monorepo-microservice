@@ -13,19 +13,11 @@ import { CompleteJobService } from './infrastructure/services/complete-job.servi
 import { FailJobService } from './infrastructure/services/fail-job.service.js';
 import { FindStaleJobsService } from './infrastructure/services/find-stale-jobs.service.js';
 import { StaleJobRecoveryService } from './infrastructure/recovery/stale-job-recovery.service.js';
+import { QUEUE_CONFIG } from './queue.constants.js';
+import type { QueueModuleOptions } from './queue.constants.js';
 
-export const QUEUE_CONFIG = Symbol('QUEUE_CONFIG');
-
-export interface QueueModuleOptions {
-    host: string;
-    port: number;
-    database: string;
-    username: string;
-    password: string;
-    synchronize?: boolean;
-    staleJobTimeoutMs?: number;
-    staleJobCheckIntervalMs?: number;
-}
+export { QUEUE_CONFIG };
+export type { QueueModuleOptions };
 
 @Module({})
 export class QueueModule {

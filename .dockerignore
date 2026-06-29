@@ -1,0 +1,22 @@
+node_modules
+**/node_modules
+dist
+build
+coverage
+.git
+.gitignore
+.idea
+.vscode
+*.log
+npm-debug.log*
+
+# Secrets / local env (las vars se inyectan vía env_file en docker-compose)
+.env
+.env.*
+!.env.example
+**/.env.local
+
+Dockerfile
+**/Dockerfile
+.dockerignore
+docker-compose*.yml

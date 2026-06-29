@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { PgQueueServer } from '@app/queue';
+import { envs } from './config/envs.js';
 import { WorkerModule } from './worker.module.js';
 
 async function bootstrap() {
@@ -8,13 +9,13 @@ async function bootstrap() {
         WorkerModule,
         {
             strategy: new PgQueueServer({
-                host: process.env['DB_HOST'] ?? 'localhost',
-                port: parseInt(process.env['DB_PORT'] ?? '5432', 10),
-                database: process.env['DB_NAME'] ?? 'queue_db',
-                user: process.env['DB_USER'] ?? 'postgres',
-                password: process.env['DB_PASS'] ?? 'postgres',
-                staleJobTimeoutMs: 300_000,
-                staleJobCheckIntervalMs: 30_000,
+                host: envs.DB_HOST,
+                port: envs.DB_PORT,
+                database: envs.DB_NAME,
+                user: envs.DB_USER,
+                password: envs.DB_PASS,
+                staleJobTimeoutMs: envs.QUEUE_STALE_JOB_TIMEOUT_MS,
+                staleJobCheckIntervalMs: envs.QUEUE_STALE_JOB_CHECK_INTERVAL_MS,
             }),
         },
     );

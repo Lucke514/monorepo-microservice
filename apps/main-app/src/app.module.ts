@@ -1,16 +1,19 @@
 import { Module } from '@nestjs/common';
 import { QueueModule } from '@app/queue';
+import { envs } from './config/envs';
+import { HealthController } from './health/health.controller';
 
 @Module({
     imports: [
         QueueModule.forRoot({
-            host: process.env['DB_HOST'] ?? 'localhost',
-            port: parseInt(process.env['DB_PORT'] ?? '5432', 10),
-            database: process.env['DB_NAME'] ?? 'queue_db',
-            username: process.env['DB_USER'] ?? 'postgres',
-            password: process.env['DB_PASS'] ?? 'postgres',
-            synchronize: process.env['NODE_ENV'] !== 'production',
+            host: envs.DB_HOST,
+            port: envs.DB_PORT,
+            database: envs.DB_NAME,
+            username: envs.DB_USER,
+            password: envs.DB_PASS,
+            synchronize: envs.NODE_ENV !== 'production',
         }),
     ],
+    controllers: [HealthController],
 })
 export class AppModule {}

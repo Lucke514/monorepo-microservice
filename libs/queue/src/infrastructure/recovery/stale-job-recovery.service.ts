@@ -6,8 +6,8 @@ import {
     OnModuleInit,
 } from '@nestjs/common';
 import { FindStaleJobsRepository } from '../../domain/ports/find-stale-jobs.repository.js';
-import { QUEUE_CONFIG } from '../../queue.module.js';
-import type { QueueModuleOptions } from '../../queue.module.js';
+import { QUEUE_CONFIG } from '../../queue.constants.js';
+import type { QueueModuleOptions } from '../../queue.constants.js';
 
 @Injectable()
 export class StaleJobRecoveryService implements OnModuleInit, OnModuleDestroy {

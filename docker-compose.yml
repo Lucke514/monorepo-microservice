@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: monorepo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+      POSTGRES_DB: ${DB_NAME:-queue_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Crea el schema (tabla jobs + índices) en el primer arranque sobre volumen vacío.
+      # Necesario porque las apps corren con synchronize=false en producción.
+      - ./libs/queue/migration.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-queue_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  main-app:
+    build:
+      context: .
+      dockerfile: apps/main-app/Dockerfile
+    container_name: monorepo-main-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Credenciales DB y tuning de cola desde una sola fuente (.env).
+    env_file:
+      - .env
+    # Overrides específicos de Docker (difieren del .env local).
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: monorepo-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+
+volumes:
+  pgdata:
