@@ -1,11 +1,11 @@
 export interface EmitOptions {
-  maxRetries?: number;
+    maxRetries?: number;
 }
 
 export abstract class QueueProducerAdapter {
-  abstract emit(
-    queueName: string,
-    payload: Record<string, unknown>,
-    options?: EmitOptions,
-  ): Promise<string>;
+    abstract emit(
+        queueName: string,
+        payload: Record<string, unknown>,
+        options?: EmitOptions,
+    ): Promise<string>;
 }

@@ -17,93 +17,107 @@ import { StaleJobRecoveryService } from './infrastructure/recovery/stale-job-rec
 export const QUEUE_CONFIG = Symbol('QUEUE_CONFIG');
 
 export interface QueueModuleOptions {
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-  synchronize?: boolean;
-  staleJobTimeoutMs?: number;
-  staleJobCheckIntervalMs?: number;
+    host: string;
+    port: number;
+    database: string;
+    username: string;
+    password: string;
+    synchronize?: boolean;
+    staleJobTimeoutMs?: number;
+    staleJobCheckIntervalMs?: number;
 }
 
 @Module({})
 export class QueueModule {
-  static forRoot(options: QueueModuleOptions): DynamicModule {
-    return {
-      module: QueueModule,
-      imports: [
-        TypeOrmModule.forRoot({
-          name: 'queue',
-          type: 'postgres',
-          host: options.host,
-          port: options.port,
-          database: options.database,
-          username: options.username,
-          password: options.password,
-          entities: [JobTypeOrmEntity],
-          synchronize: options.synchronize ?? false,
-        }),
-        TypeOrmModule.forFeature([JobTypeOrmEntity], 'queue'),
-      ],
-      providers: [
-        { provide: QUEUE_CONFIG, useValue: options },
-        { provide: EnqueueJobRepository, useClass: EnqueueJobService },
-        { provide: ClaimJobRepository, useClass: ClaimJobService },
-        { provide: CompleteJobRepository, useClass: CompleteJobService },
-        { provide: FailJobRepository, useClass: FailJobService },
-        { provide: FindStaleJobsRepository, useClass: FindStaleJobsService },
-        EnqueueJobUseCase,
-        StaleJobRecoveryService,
-      ],
-      exports: [EnqueueJobUseCase],
-    };
-  }
+    static forRoot(options: QueueModuleOptions): DynamicModule {
+        return {
+            module: QueueModule,
+            imports: [
+                TypeOrmModule.forRoot({
+                    name: 'queue',
+                    type: 'postgres',
+                    host: options.host,
+                    port: options.port,
+                    database: options.database,
+                    username: options.username,
+                    password: options.password,
+                    entities: [JobTypeOrmEntity],
+                    synchronize: options.synchronize ?? false,
+                }),
+                TypeOrmModule.forFeature([JobTypeOrmEntity], 'queue'),
+            ],
+            providers: [
+                { provide: QUEUE_CONFIG, useValue: options },
+                { provide: EnqueueJobRepository, useClass: EnqueueJobService },
+                { provide: ClaimJobRepository, useClass: ClaimJobService },
+                {
+                    provide: CompleteJobRepository,
+                    useClass: CompleteJobService,
+                },
+                { provide: FailJobRepository, useClass: FailJobService },
+                {
+                    provide: FindStaleJobsRepository,
+                    useClass: FindStaleJobsService,
+                },
+                EnqueueJobUseCase,
+                StaleJobRecoveryService,
+            ],
+            exports: [EnqueueJobUseCase],
+        };
+    }
 
-  static forRootAsync(options: {
-    useFactory: (...args: unknown[]) => QueueModuleOptions | Promise<QueueModuleOptions>;
-    inject?: unknown[];
-    imports?: unknown[];
-  }): DynamicModule {
-    return {
-      module: QueueModule,
-      imports: [
-        TypeOrmModule.forRootAsync({
-          name: 'queue',
-          useFactory: async (...args: unknown[]) => {
-            const config = await options.useFactory(...args);
-            return {
-              type: 'postgres' as const,
-              host: config.host,
-              port: config.port,
-              database: config.database,
-              username: config.username,
-              password: config.password,
-              entities: [JobTypeOrmEntity],
-              synchronize: config.synchronize ?? false,
-            };
-          },
-          inject: options.inject as never[] | undefined,
-          imports: options.imports as never[] | undefined,
-        }),
-        TypeOrmModule.forFeature([JobTypeOrmEntity], 'queue'),
-        ...((options.imports as never[]) ?? []),
-      ],
-      providers: [
-        {
-          provide: QUEUE_CONFIG,
-          useFactory: options.useFactory,
-          inject: options.inject as never[] | undefined,
-        },
-        { provide: EnqueueJobRepository, useClass: EnqueueJobService },
-        { provide: ClaimJobRepository, useClass: ClaimJobService },
-        { provide: CompleteJobRepository, useClass: CompleteJobService },
-        { provide: FailJobRepository, useClass: FailJobService },
-        { provide: FindStaleJobsRepository, useClass: FindStaleJobsService },
-        EnqueueJobUseCase,
-        StaleJobRecoveryService,
-      ],
-      exports: [EnqueueJobUseCase],
-    };
-  }
+    static forRootAsync(options: {
+        useFactory: (
+            ...args: unknown[]
+        ) => QueueModuleOptions | Promise<QueueModuleOptions>;
+        inject?: unknown[];
+        imports?: unknown[];
+    }): DynamicModule {
+        return {
+            module: QueueModule,
+            imports: [
+                TypeOrmModule.forRootAsync({
+                    name: 'queue',
+                    useFactory: async (...args: unknown[]) => {
+                        const config = await options.useFactory(...args);
+                        return {
+                            type: 'postgres' as const,
+                            host: config.host,
+                            port: config.port,
+                            database: config.database,
+                            username: config.username,
+                            password: config.password,
+                            entities: [JobTypeOrmEntity],
+                            synchronize: config.synchronize ?? false,
+                        };
+                    },
+                    inject: options.inject as never[] | undefined,
+                    imports: options.imports as never[] | undefined,
+                }),
+                TypeOrmModule.forFeature([JobTypeOrmEntity], 'queue'),
+                ...((options.imports as never[]) ?? []),
+            ],
+            providers: [
+                {
+                    provide: QUEUE_CONFIG,
+                    useFactory: options.useFactory,
+                    inject: options.inject as never[] | undefined,
+                },
+                { provide: EnqueueJobRepository, useClass: EnqueueJobService },
+                { provide: ClaimJobRepository, useClass: ClaimJobService },
+                {
+                    provide: CompleteJobRepository,
+                    useClass: CompleteJobService,
+                },
+                { provide: FailJobRepository, useClass: FailJobService },
+                {
+                    provide: FindStaleJobsRepository,
+                    useClass: FindStaleJobsService,
+                },
+                EnqueueJobUseCase,
+                StaleJobRecoveryService,
+            ],
+            exports: [EnqueueJobUseCase],
+        };
+    }
 }

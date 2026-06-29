@@ -1,3 +1,3 @@
 export abstract class GetCacheRepository {
-  abstract getCache(key: string): Promise<any>;
+    abstract getCache(key: string): Promise<any>;
 }

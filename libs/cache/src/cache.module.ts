@@ -11,14 +11,14 @@ import { DeleteCacheService } from './infrastructure/services/deleteCache.servic
 import { UpdateCacheService } from './infrastructure/services/updateCache.service';
 
 @Module({
-  imports: [NestCacheModule.register()],
-  providers: [
-    CacheManagerUseCase,
-    { provide: GetCacheRepository, useClass: GetCacheService },
-    { provide: SaveCacheRepository, useClass: SaveCacheService },
-    { provide: DeleteCacheRepository, useClass: DeleteCacheService },
-    { provide: UpdateCacheRepository, useClass: UpdateCacheService },
-  ],
-  exports: [CacheManagerUseCase],
+    imports: [NestCacheModule.register()],
+    providers: [
+        CacheManagerUseCase,
+        { provide: GetCacheRepository, useClass: GetCacheService },
+        { provide: SaveCacheRepository, useClass: SaveCacheService },
+        { provide: DeleteCacheRepository, useClass: DeleteCacheService },
+        { provide: UpdateCacheRepository, useClass: UpdateCacheService },
+    ],
+    exports: [CacheManagerUseCase],
 })
 export class CacheModule {}

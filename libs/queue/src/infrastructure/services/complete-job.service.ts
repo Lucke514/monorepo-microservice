@@ -5,15 +5,15 @@ import { CompleteJobRepository } from '../../domain/ports/complete-job.repositor
 
 @Injectable()
 export class CompleteJobService implements CompleteJobRepository {
-  constructor(
-    @InjectDataSource('queue')
-    private readonly dataSource: DataSource,
-  ) {}
+    constructor(
+        @InjectDataSource('queue')
+        private readonly dataSource: DataSource,
+    ) {}
 
-  async complete(jobId: string): Promise<void> {
-    await this.dataSource.query(
-      `UPDATE jobs SET status = 'done', processed_at = NOW() WHERE id = $1`,
-      [jobId],
-    );
-  }
+    async complete(jobId: string): Promise<void> {
+        await this.dataSource.query(
+            `UPDATE jobs SET status = 'done', processed_at = NOW() WHERE id = $1`,
+            [jobId],
+        );
+    }
 }
