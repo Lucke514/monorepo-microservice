@@ -14,7 +14,7 @@ export class JobTypeOrmEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ name: 'queue_name', length: 128 })
+    @Column({ length: 128 })
     queueName: string;
 
     @Column({ type: 'jsonb' })
@@ -26,25 +26,23 @@ export class JobTypeOrmEntity {
     @Column({ default: 0 })
     attempts: number;
 
-    @Column({ name: 'max_retries', default: 3 })
+    @Column({ default: 3 })
     maxRetries: number;
 
     @Column({
-        name: 'locked_at',
         type: 'timestamptz',
         nullable: true,
         default: null,
     })
     lockedAt: Date | null;
 
-    @Column({ name: 'worker_id', length: 128, nullable: true, default: null })
+    @Column({ length: 128, nullable: true, default: null })
     workerId: string | null;
 
-    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    @CreateDateColumn({ type: 'timestamptz' })
     createdAt: Date;
 
     @Column({
-        name: 'processed_at',
         type: 'timestamptz',
         nullable: true,
         default: null,
@@ -52,7 +50,6 @@ export class JobTypeOrmEntity {
     processedAt: Date | null;
 
     @Column({
-        name: 'error_message',
         type: 'text',
         nullable: true,
         default: null,

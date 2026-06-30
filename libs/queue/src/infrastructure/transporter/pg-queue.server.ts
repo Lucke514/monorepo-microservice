@@ -143,15 +143,15 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
     private async claimJob(queueName: string): Promise<JobEntity | null> {
         const result = await this.pool.query<Record<string, unknown>>(
             `UPDATE jobs
-       SET status    = 'processing',
-           locked_at = NOW(),
-           worker_id = $2,
-           attempts  = attempts + 1
+       SET status      = 'processing',
+           "lockedAt"  = NOW(),
+           "workerId"  = $2,
+           attempts    = attempts + 1
        WHERE id = (
          SELECT id FROM jobs
-         WHERE queue_name = $1
-           AND status     = 'pending'
-         ORDER BY created_at ASC
+         WHERE "queueName" = $1
+           AND status       = 'pending'
+         ORDER BY "createdAt" ASC
          LIMIT 1
          FOR UPDATE SKIP LOCKED
        )
@@ -162,27 +162,27 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
         if (!row) return null;
         return {
             id: row['id'] as string,
-            queueName: row['queue_name'] as string,
+            queueName: row['queueName'] as string,
             payload: row['payload'] as Record<string, unknown>,
             status: row['status'] as JobStatus,
             attempts: row['attempts'] as number,
-            maxRetries: row['max_retries'] as number,
-            lockedAt: row['locked_at']
-                ? new Date(row['locked_at'] as string)
+            maxRetries: row['maxRetries'] as number,
+            lockedAt: row['lockedAt']
+                ? new Date(row['lockedAt'] as string)
                 : null,
-            workerId: (row['worker_id'] as string | null) ?? null,
-            createdAt: new Date(row['created_at'] as string),
-            processedAt: row['processed_at']
-                ? new Date(row['processed_at'] as string)
+            workerId: (row['workerId'] as string | null) ?? null,
+            createdAt: new Date(row['createdAt'] as string),
+            processedAt: row['processedAt']
+                ? new Date(row['processedAt'] as string)
                 : null,
-            errorMessage: (row['error_message'] as string | null) ?? null,
+            errorMessage: (row['errorMessage'] as string | null) ?? null,
             result: (row['result'] as Record<string, unknown> | null) ?? null,
         };
     }
 
     private async markDone(id: string, result: unknown): Promise<void> {
         await this.pool.query(
-            `UPDATE jobs SET status = 'done', processed_at = NOW(), result = $2 WHERE id = $1`,
+            `UPDATE jobs SET status = 'done', "processedAt" = NOW(), result = $2 WHERE id = $1`,
             [id, JSON.stringify(result ?? null)],
         );
         await this.notifyReply(id);
@@ -195,12 +195,12 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
     ): Promise<void> {
         if (reschedule) {
             await this.pool.query(
-                `UPDATE jobs SET status = 'pending', locked_at = NULL, worker_id = NULL, error_message = $2 WHERE id = $1`,
+                `UPDATE jobs SET status = 'pending', "lockedAt" = NULL, "workerId" = NULL, "errorMessage" = $2 WHERE id = $1`,
                 [id, message],
             );
         } else {
             await this.pool.query(
-                `UPDATE jobs SET status = 'failed', processed_at = NOW(), error_message = $2 WHERE id = $1`,
+                `UPDATE jobs SET status = 'failed', "processedAt" = NOW(), "errorMessage" = $2 WHERE id = $1`,
                 [id, message],
             );
             await this.notifyReply(id);
@@ -227,12 +227,12 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
         const rescheduled = await this.pool
             .query<{ id: string }>(
                 `UPDATE jobs
-         SET status    = 'pending',
-             locked_at = NULL,
-             worker_id = NULL
-         WHERE status    = 'processing'
-           AND locked_at < NOW() - ($1 * INTERVAL '1 millisecond')
-           AND attempts  < max_retries
+         SET status     = 'pending',
+             "lockedAt" = NULL,
+             "workerId" = NULL
+         WHERE status     = 'processing'
+           AND "lockedAt" < NOW() - ($1 * INTERVAL '1 millisecond')
+           AND attempts   < "maxRetries"
          RETURNING id`,
                 [timeoutMs],
             )
@@ -242,11 +242,11 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
         const failed = await this.pool
             .query<{ id: string }>(
                 `UPDATE jobs
-         SET status       = 'failed',
-             processed_at = NOW()
-         WHERE status    = 'processing'
-           AND locked_at < NOW() - ($1 * INTERVAL '1 millisecond')
-           AND attempts  >= max_retries
+         SET status        = 'failed',
+             "processedAt" = NOW()
+         WHERE status     = 'processing'
+           AND "lockedAt" < NOW() - ($1 * INTERVAL '1 millisecond')
+           AND attempts   >= "maxRetries"
          RETURNING id`,
                 [timeoutMs],
             )

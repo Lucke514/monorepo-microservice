@@ -82,8 +82,8 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
         const { rows } = await this.pool.query<{
             status: string;
             result: JobResult;
-            error_message: string | null;
-        }>(`SELECT status, result, error_message FROM jobs WHERE id = $1`, [
+            errorMessage: string | null;
+        }>(`SELECT status, result, "errorMessage" FROM jobs WHERE id = $1`, [
             jobId,
         ]);
         const row = rows[0];
@@ -97,7 +97,7 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
             clearTimeout(entry.timer);
             this.pending.delete(jobId);
             entry.reject(
-                new JobFailedError(jobId, row.error_message ?? 'unknown error'),
+                new JobFailedError(jobId, row.errorMessage ?? 'unknown error'),
             );
         }
     }
