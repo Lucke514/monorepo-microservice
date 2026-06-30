@@ -1,7 +1,7 @@
 // Token e interfaz de configuración de la cola.
 // Viven en su propio módulo para evitar el import circular entre
 // queue.module.ts y los providers que inyectan QUEUE_CONFIG
-// (p. ej. StaleJobRecoveryService).
+// (p. ej. RequestJobUseCase, JobReplyWaiterService).
 
 export const QUEUE_CONFIG = Symbol('QUEUE_CONFIG');
 
@@ -16,8 +16,6 @@ export interface QueueModuleOptions {
     username: string;
     password: string;
     synchronize?: boolean;
-    staleJobTimeoutMs?: number;
-    staleJobCheckIntervalMs?: number;
     requestTimeoutMs?: number;
     // Tamaño máximo de los pools de conexión del lado productor: el de TypeORM
     // (enqueue) y el del JobReplyWaiterService (SELECT de replies).

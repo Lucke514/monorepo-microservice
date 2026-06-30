@@ -3,9 +3,7 @@
 
 export class JobTimeoutError extends Error {
     constructor(jobId: string, timeoutMs: number) {
-        super(
-            `Job ${jobId} did not complete within ${timeoutMs}ms`,
-        );
+        super(`Job ${jobId} did not complete within ${timeoutMs}ms`);
         this.name = 'JobTimeoutError';
     }
 }

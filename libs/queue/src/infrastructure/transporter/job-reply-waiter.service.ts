@@ -56,14 +56,18 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
             void this.reconnect();
         });
 
-        this.logger.log(`Listening for replies on channel: ${JOBS_REPLY_CHANNEL}`);
+        this.logger.log(
+            `Listening for replies on channel: ${JOBS_REPLY_CHANNEL}`,
+        );
     }
 
     async onModuleDestroy(): Promise<void> {
         this.closing = true;
         for (const [jobId, entry] of this.pending) {
             clearTimeout(entry.timer);
-            entry.reject(new Error(`Shutting down while awaiting job ${jobId}`));
+            entry.reject(
+                new Error(`Shutting down while awaiting job ${jobId}`),
+            );
         }
         this.pending.clear();
         await this.listenClient?.end().catch(() => undefined);
@@ -97,10 +101,9 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
             status: string;
             result: JobResult;
             error_message: string | null;
-        }>(
-            `SELECT status, result, error_message FROM jobs WHERE id = $1`,
-            [jobId],
-        );
+        }>(`SELECT status, result, error_message FROM jobs WHERE id = $1`, [
+            jobId,
+        ]);
         const row = rows[0];
         if (!row) return;
 

@@ -3,17 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EnqueueJobUseCase } from './application/enqueue-job.use-case.js';
 import { RequestJobUseCase } from './application/request-job.use-case.js';
 import { EnqueueJobRepository } from './domain/ports/enqueue-job.repository.js';
-import { ClaimJobRepository } from './domain/ports/claim-job.repository.js';
-import { CompleteJobRepository } from './domain/ports/complete-job.repository.js';
-import { FailJobRepository } from './domain/ports/fail-job.repository.js';
-import { FindStaleJobsRepository } from './domain/ports/find-stale-jobs.repository.js';
 import { JobTypeOrmEntity } from './infrastructure/entities/job.typeorm-entity.js';
 import { EnqueueJobService } from './infrastructure/services/enqueue-job.service.js';
-import { ClaimJobService } from './infrastructure/services/claim-job.service.js';
-import { CompleteJobService } from './infrastructure/services/complete-job.service.js';
-import { FailJobService } from './infrastructure/services/fail-job.service.js';
-import { FindStaleJobsService } from './infrastructure/services/find-stale-jobs.service.js';
-import { StaleJobRecoveryService } from './infrastructure/recovery/stale-job-recovery.service.js';
 import { JobReplyWaiterService } from './infrastructure/transporter/job-reply-waiter.service.js';
 import { QUEUE_CONFIG } from './queue.constants.js';
 import type { QueueModuleOptions } from './queue.constants.js';
@@ -44,18 +35,7 @@ export class QueueModule {
             providers: [
                 { provide: QUEUE_CONFIG, useValue: options },
                 { provide: EnqueueJobRepository, useClass: EnqueueJobService },
-                { provide: ClaimJobRepository, useClass: ClaimJobService },
-                {
-                    provide: CompleteJobRepository,
-                    useClass: CompleteJobService,
-                },
-                { provide: FailJobRepository, useClass: FailJobService },
-                {
-                    provide: FindStaleJobsRepository,
-                    useClass: FindStaleJobsService,
-                },
                 EnqueueJobUseCase,
-                StaleJobRecoveryService,
                 JobReplyWaiterService,
                 RequestJobUseCase,
             ],
@@ -102,18 +82,7 @@ export class QueueModule {
                     inject: options.inject as never[] | undefined,
                 },
                 { provide: EnqueueJobRepository, useClass: EnqueueJobService },
-                { provide: ClaimJobRepository, useClass: ClaimJobService },
-                {
-                    provide: CompleteJobRepository,
-                    useClass: CompleteJobService,
-                },
-                { provide: FailJobRepository, useClass: FailJobService },
-                {
-                    provide: FindStaleJobsRepository,
-                    useClass: FindStaleJobsService,
-                },
                 EnqueueJobUseCase,
-                StaleJobRecoveryService,
                 JobReplyWaiterService,
                 RequestJobUseCase,
             ],

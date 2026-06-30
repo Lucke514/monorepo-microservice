@@ -21,7 +21,10 @@ interface EnvVars {
 
 const envsSchema = joi
     .object({
-        NODE_ENV: joi.string().valid('development', 'production', 'test').default('development'),
+        NODE_ENV: joi
+            .string()
+            .valid('development', 'production', 'test')
+            .default('development'),
         DB_HOST: joi.string().required(),
         DB_PORT: joi.number().required(),
         DB_NAME: joi.string().required(),
@@ -38,11 +41,16 @@ const envsSchema = joi
     .unknown(true);
 
 // Cargar los errores del esquema de validación
-const validationResult = envsSchema.validate(process.env) as { error?: joi.ValidationError; value: EnvVars };
+const validationResult = envsSchema.validate(process.env) as {
+    error?: joi.ValidationError;
+    value: EnvVars;
+};
 
 // Asignar las variables de entorno validadas al objeto global process.env
 if (validationResult.error) {
-    throw new Error(`Error en las variables de entorno: ${validationResult.error.message}`);
+    throw new Error(
+        `Error en las variables de entorno: ${validationResult.error.message}`,
+    );
 }
 
 // En caso de que la validación sea exitosa, asignar las variables al objeto global
