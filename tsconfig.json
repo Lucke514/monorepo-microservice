@@ -28,6 +28,12 @@
       "@app/cache/*": [
         "libs/cache/src/*"
       ],
+      "@app/database": [
+        "libs/database/src"
+      ],
+      "@app/database/*": [
+        "libs/database/src/*"
+      ],
       "@app/queue": [
         "libs/queue/src"
       ],

@@ -83,6 +83,7 @@
     ],
     "moduleNameMapper": {
       "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
+      "^@app/database(|/.*)$": "<rootDir>/libs/database/src/$1",
       "^@app/queue(|/.*)$": "<rootDir>/libs/queue/src/$1"
     }
   }

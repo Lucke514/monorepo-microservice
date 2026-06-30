@@ -1,13 +1,12 @@
 import {
-    Inject,
     Injectable,
     Logger,
     OnModuleDestroy,
     OnModuleInit,
 } from '@nestjs/common';
+import { PgConnectionService } from '@app/database';
 import { Client, Pool } from 'pg';
-import { JOBS_REPLY_CHANNEL, QUEUE_CONFIG } from '../../queue.constants.js';
-import type { QueueModuleOptions } from '../../queue.constants.js';
+import { JOBS_REPLY_CHANNEL } from '../../domain/constants/queue.constants.js';
 import {
     JobFailedError,
     JobTimeoutError,
@@ -21,11 +20,6 @@ interface PendingRequest {
     timer: NodeJS.Timeout;
 }
 
-/**
- * Lado productor del patrón request/reply. Mantiene un cliente pg dedicado a
- * LISTEN del canal de reply y resuelve las promesas pendientes (por jobId) en
- * cuanto el worker notifica que el job alcanzó un estado terminal.
- */
 @Injectable()
 export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(JobReplyWaiterService.name);
@@ -35,16 +29,11 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
     private listenClient: Client;
     private closing = false;
 
-    constructor(
-        @Inject(QUEUE_CONFIG) private readonly config: QueueModuleOptions,
-    ) {}
+    constructor(private readonly connection: PgConnectionService) {}
 
     async onModuleInit(): Promise<void> {
-        this.pool = new Pool({
-            ...this.connectionConfig(),
-            max: this.config.poolMax ?? 10,
-        });
-        this.listenClient = new Client(this.listenConnectionConfig());
+        this.pool = this.connection.getPool();
+        this.listenClient = this.connection.createListenClient();
         await this.listenClient.connect();
         await this.listenClient.query(`LISTEN "${JOBS_REPLY_CHANNEL}"`);
 
@@ -71,13 +60,8 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
         }
         this.pending.clear();
         await this.listenClient?.end().catch(() => undefined);
-        await this.pool?.end().catch(() => undefined);
     }
 
-    /**
-     * Espera el estado terminal del job. Resuelve con su `result` si termina en
-     * 'done', rechaza con JobFailedError si 'failed', o JobTimeoutError al expirar.
-     */
     waitFor(jobId: string, timeoutMs: number): Promise<JobResult> {
         return new Promise<JobResult>((resolve, reject) => {
             const timer = setTimeout(() => {
@@ -87,8 +71,6 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
 
             this.pending.set(jobId, { resolve, reject, timer });
 
-            // El worker puede terminar antes de que registremos el waiter; una
-            // comprobación inmediata cierra esa condición de carrera.
             void this.settleFromDb(jobId);
         });
     }
@@ -118,33 +100,13 @@ export class JobReplyWaiterService implements OnModuleInit, OnModuleDestroy {
                 new JobFailedError(jobId, row.error_message ?? 'unknown error'),
             );
         }
-        // pending/processing → seguimos esperando la siguiente notificación.
-    }
-
-    private connectionConfig() {
-        return {
-            host: this.config.host,
-            port: this.config.port,
-            database: this.config.database,
-            user: this.config.username,
-            password: this.config.password,
-        };
-    }
-
-    // El cliente LISTEN va directo a Postgres (bypass de PgBouncer).
-    private listenConnectionConfig() {
-        return {
-            ...this.connectionConfig(),
-            host: this.config.listenHost ?? this.config.host,
-            port: this.config.listenPort ?? this.config.port,
-        };
     }
 
     private async reconnect(): Promise<void> {
         let delay = 1_000;
         while (!this.closing) {
             try {
-                const client = new Client(this.listenConnectionConfig());
+                const client = this.connection.createListenClient();
                 await client.connect();
                 await client.query(`LISTEN "${JOBS_REPLY_CHANNEL}"`);
                 client.on('notification', (msg) => {

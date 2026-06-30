@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EnqueueJobRepository } from '../domain/ports/enqueue-job.repository.js';
 import { JobReplyWaiterService } from '../infrastructure/transporter/job-reply-waiter.service.js';
-import { QUEUE_CONFIG } from '../queue.constants.js';
-import type { QueueModuleOptions } from '../queue.constants.js';
+import { QUEUE_CONFIG } from '../domain/constants/queue.constants.js';
+import type { QueueModuleOptions } from '../domain/constants/queue.constants.js';
 
 export interface RequestOptions {
     maxRetries?: number;

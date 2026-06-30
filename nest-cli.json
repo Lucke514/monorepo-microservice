@@ -10,6 +10,15 @@
   "monorepo": true,
   "root": "apps/main-app",
   "projects": {
+    "database": {
+      "type": "library",
+      "root": "libs/database",
+      "entryFile": "index",
+      "sourceRoot": "libs/database/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/database/tsconfig.lib.json"
+      }
+    },
     "queue": {
       "type": "library",
       "root": "libs/queue",
