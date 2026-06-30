@@ -20,6 +20,8 @@ export interface PgQueueServerConfig {
     // (host/port). Si no se setea, cae a host/port.
     listenHost?: string;
     listenPort?: number;
+    /** Identificador de la instancia worker que captura jobs (p. ej. hostname). */
+    workerId?: string;
 }
 
 export class PgQueueServer extends Server implements CustomTransportStrategy {
@@ -169,6 +171,7 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
             `UPDATE jobs
        SET status    = 'processing',
            locked_at = NOW(),
+           worker_id = $2,
            attempts  = attempts + 1
        WHERE id = (
          SELECT id FROM jobs
@@ -179,7 +182,7 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
          FOR UPDATE SKIP LOCKED
        )
        RETURNING *`,
-            [queueName],
+            [queueName, this.config.workerId ?? null],
         );
         const row = result.rows[0];
         if (!row) return null;
@@ -193,6 +196,7 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
             lockedAt: row['locked_at']
                 ? new Date(row['locked_at'] as string)
                 : null,
+            workerId: (row['worker_id'] as string | null) ?? null,
             createdAt: new Date(row['created_at'] as string),
             processedAt: row['processed_at']
                 ? new Date(row['processed_at'] as string)
@@ -217,7 +221,7 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
     ): Promise<void> {
         if (reschedule) {
             await this.pool.query(
-                `UPDATE jobs SET status = 'pending', locked_at = NULL, error_message = $2 WHERE id = $1`,
+                `UPDATE jobs SET status = 'pending', locked_at = NULL, worker_id = NULL, error_message = $2 WHERE id = $1`,
                 [id, message],
             );
         } else {
@@ -251,7 +255,8 @@ export class PgQueueServer extends Server implements CustomTransportStrategy {
             .query<{ id: string }>(
                 `UPDATE jobs
          SET status    = 'pending',
-             locked_at = NULL
+             locked_at = NULL,
+             worker_id = NULL
          WHERE status    = 'processing'
            AND locked_at < NOW() - ($1 * INTERVAL '1 millisecond')
            AND attempts  < max_retries

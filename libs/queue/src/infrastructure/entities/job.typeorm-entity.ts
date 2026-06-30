@@ -37,6 +37,9 @@ export class JobTypeOrmEntity {
     })
     lockedAt: Date | null;
 
+    @Column({ name: 'worker_id', length: 128, nullable: true, default: null })
+    workerId: string | null;
+
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
 

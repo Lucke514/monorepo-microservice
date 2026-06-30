@@ -11,11 +11,12 @@ export class ExampleJobController {
         @Payload() data: Record<string, unknown>,
         @Ctx() ctx: PgQueueContext,
     ): Promise<Record<string, unknown>> {
+        this.logger.log(`Payload: ${JSON.stringify(data)}`);
+        
         const job = ctx.getJob();
         this.logger.log(
             `Processing job ${job.id} (attempt ${job.attempts}/${job.maxRetries})`,
         );
-        this.logger.log(`Payload: ${JSON.stringify(data)}`);
 
         // Demo del manejo de errores: con `message=fail` el handler lanza, el job
         // agota reintentos (maxRetries) y termina 'failed' → GET /jobs/sync → 500.

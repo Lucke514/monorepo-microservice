@@ -13,6 +13,7 @@ export interface JobEntity {
     attempts: number;
     maxRetries: number;
     lockedAt: Date | null;
+    workerId: string | null;
     createdAt: Date;
     processedAt: Date | null;
     errorMessage: string | null;

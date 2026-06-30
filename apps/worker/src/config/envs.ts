@@ -1,5 +1,6 @@
 import * as joi from 'joi';
 import * as dotenv from 'dotenv';
+import { hostname } from 'os';
 import { join } from 'path';
 
 dotenv.config({ path: join(process.cwd(), 'apps/worker/.env.local') });
@@ -17,6 +18,7 @@ interface EnvVars {
     QUEUE_STALE_JOB_CHECK_INTERVAL_MS: number;
     QUEUE_MAX_RETRIES: number;
     QUEUE_MAX_CONNECTIONS: number;
+    WORKER_ID: string;
 }
 
 const envsSchema = joi
@@ -37,6 +39,7 @@ const envsSchema = joi
         QUEUE_STALE_JOB_CHECK_INTERVAL_MS: joi.number().default(30_000),
         QUEUE_MAX_RETRIES: joi.number().default(3),
         QUEUE_MAX_CONNECTIONS: joi.number().default(20),
+        WORKER_ID: joi.string().default(hostname()),
     })
     .unknown(true);
 
@@ -68,4 +71,5 @@ export const envs: EnvVars = {
     QUEUE_STALE_JOB_CHECK_INTERVAL_MS: value.QUEUE_STALE_JOB_CHECK_INTERVAL_MS,
     QUEUE_MAX_RETRIES: value.QUEUE_MAX_RETRIES,
     QUEUE_MAX_CONNECTIONS: value.QUEUE_MAX_CONNECTIONS,
+    WORKER_ID: value.WORKER_ID,
 };

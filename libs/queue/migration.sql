@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   attempts      INTEGER      NOT NULL DEFAULT 0,
   max_retries   INTEGER      NOT NULL DEFAULT 3,
   locked_at     TIMESTAMPTZ,
+  worker_id     VARCHAR(128),
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   processed_at  TIMESTAMPTZ,
   error_message TEXT,
@@ -26,3 +27,6 @@ CREATE INDEX IF NOT EXISTS idx_jobs_claim
 CREATE INDEX IF NOT EXISTS idx_jobs_recovery
   ON jobs (status, locked_at)
   WHERE status = 'processing';
+
+-- Migración incremental (bases existentes):
+-- ALTER TABLE jobs ADD COLUMN IF NOT EXISTS worker_id VARCHAR(128);

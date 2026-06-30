@@ -19,6 +19,7 @@ async function bootstrap() {
                 maxConnections: envs.QUEUE_MAX_CONNECTIONS,
                 listenHost: envs.DB_LISTEN_HOST,
                 listenPort: envs.DB_LISTEN_PORT,
+                workerId: envs.WORKER_ID,
             }),
         },
     );
